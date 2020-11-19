@@ -28,6 +28,12 @@ Y_map_i             = pr_scaletocmap(Y, ...
                                      layer.color.map, ...
                                      [0 256 0]);
 
+if numel(layer.color.map) == 3
+    cmap = layer.color.map(:); 
+    layer.color.map = repmat(layer.color.map(:)', 256, 1);
+end
+
+    
 % Convert to RGB
 Y_rgb                       = reshape(layer.color.map(Y_map_i(:),:),....
                                       pandims);

@@ -13,7 +13,9 @@ function layers = sd_config_layers(todo,varargin)
 %
 % layer_type    - 1xN cell array of charater vectors that can take any of
 %                 the following values: 
-%                 - 'truecolor', for unthresholded maps (e.g. anatomical)
+%                 - 'structural', for unthresholded maps (anatomical),
+%                    colormaps are not centered and the full range is used
+%                 - 'truecolor', for unthresholded maps
 %                 - 'blob', for thresholded maps
 %                 - 'dual', for dual-coded maps (Allen et al., 2012)
 %                 - 'contour', for contour maps
@@ -55,7 +57,7 @@ switch lower(todo)
         end
 
         valid_layers = ismember(lower(layer_type), ...
-                                {'truecolor','blob','dual','contour','cluster'});
+                                {'structural', 'truecolor','blob','dual','contour','cluster'});
         valid_layer_array = layer_type(valid_layers);
         n_layer = sum(valid_layers);
         
@@ -80,14 +82,16 @@ switch lower(todo)
                                      'map', [], ...
                                      'range', [], ...
                                      'opacity', [], ...
-                                     'label', '');
+                                     'label', '', ...
+                                     'show', true);
 
         color_struct_dual   = struct('file','', ...
                                      'header',[], ...
                                      'hold',[], ...
                                      'map', [], ...
                                      'range', [], ...
-                                     'label', '');
+                                     'label', '', ...
+                                     'show', true);
 
         color_struct_contour = struct('file','', ...
                                       'header',[], ...
@@ -97,7 +101,8 @@ switch lower(todo)
                                       'opacity', [], ...
                                       'line_width',[], ...
                                       'line_style','', ...
-                                      'label', '');           
+                                      'label', '', ...
+                                      'show', true);          
 
         opacity_struct      = struct('file', '', ...
                                      'header',[], ...
@@ -113,6 +118,10 @@ switch lower(todo)
 
         % Assemble layer-specific structure arrays
 
+        structural_struct    = struct('type','structural', ...
+                                     'color', color_struct, ...
+                                     'mask', mask_struct);
+                                 
         truecolor_struct    = struct('type','truecolor', ...
                                      'color', color_struct, ...
                                      'mask', mask_struct);
@@ -145,6 +154,8 @@ switch lower(todo)
         for i_layer = 1:n_layer
 
             switch lower(valid_layer_array{i_layer})
+                case 'structural'
+                    template_struct = structural_struct;
                 case 'truecolor'
                     template_struct = truecolor_struct;
                 case 'blob'
@@ -203,6 +214,8 @@ switch lower(todo)
             % -----------------------------------------------------
             if isempty(layers(i_layer).color.map)
                 switch lower(layers(i_layer).type)
+                    case {'structural'}
+                        layers(i_layer).color.map = gray(256);
                     case {'truecolor','blob','dual','cluster'}
                         if i_layer == 1
                             layers(i_layer).color.map = gray(256);
@@ -219,25 +232,23 @@ switch lower(todo)
             if isempty(layers(i_layer).color.range)
                 [color_max, color_min] = slover('volmaxmin', layers(i_layer).color.header);
                 
-                % Make map symmetrical
-                if color_min < 0
+                % Make map symmetrical only when it is not structural!
+                if color_min < 0 && ~strcmp(lower(layers(i_layer).type), 'structural')
                     abs_color_max = max(abs([color_max, color_min]));
                     layers(i_layer).color.range = [-abs_color_max, abs_color_max];
                 else
                     layers(i_layer).color.range = [color_min, color_max];
                 end
-                    
             end
             
             switch lower(layers(i_layer).type)
-                case {'truecolor','blob','contour','cluster'}
+                case {'structural', 'truecolor','blob','contour','cluster'}
                     
                     % Opacity
                     % -----------------------------------------------------
                     if isempty(layers(i_layer).color.opacity)
                         layers(i_layer).color.opacity = 1;
                     end
-                                        
             end
 
             switch lower(layers(i_layer).type)
@@ -272,7 +283,6 @@ switch lower(todo)
                         layers(i_layer).color.file = get_image_file(i_layer, ...
                                                                     lower(layers(i_layer).type), ...
                                                                     'opacity-coding');
-                        
                     end
                     
                     % Header

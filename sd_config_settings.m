@@ -18,6 +18,7 @@ function settings = sd_config_settings(todo, varargin)
 %
 % ......................................................................... 
 % Bram Zandbelt (bramzandbelt@gmail.com), Radboud University
+% Modified by Pieter Vandemaele (pieter.vandemaele@gmail.com), Ghent University
 
 % Make sure required toolboxes are on path
 assert(~isempty(spm('Dir')),'<a href="http://www.fil.ion.ucl.ac.uk/spm/">SPM</a> cannot be found; make sure it is on MATLAB''s search path.')
@@ -52,6 +53,7 @@ switch lower(todo)
                              'width_constraints', constraints, ...
                              'height_constraints', constraints, ...
                              'height_width_ratio', constraints, ...
+                             'panel', [], ...
                              'n', n, ...
                              'i', struct('colorbar',[]));
         
@@ -104,14 +106,36 @@ switch lower(todo)
         % settings.fig_specs.margin
         % -----------------------------------------------------------------
         
-        if isempty(settings.fig_specs.margin.figure)
-            if isempty(settings.fig_specs.title)
-                settings.fig_specs.margin.figure = [15 15 5 5];
+        pf = settings.fig_specs.panel;
+        if ~isempty(pf)
+            % Calculate width and height of panel
+            % ---------------------------------------------------------------------
+            size_fig = getpixelposition(pf.figure);
+            pf_size = pf.position .* repmat(size_fig(3:4),1,2);
+            % Override default width and height with parent panel size
+            settings.fig_specs.width.figure = pf_size(3);
+            settings.fig_specs.height.figure = pf_size(4);
+            settings.fig_specs.width.map_panel = [];
+            settings.fig_specs.height.map_panel = [];
+            %             settings.fig_specs.margin.figure = [50 50 50 50 ];
+            settings.fig_specs.margin.figure = [0 0 0 0 ];
+            settings.fig_specs.width.legend_panel = [];
+            if ~isempty(settings.fig_specs.title)
+                settings.fig_specs.height.title_panel = 25;
             else
-                settings.fig_specs.margin.figure = [15 15 5 20];
+                settings.fig_specs.height.title_panel = 0;
+            end
+            
+        else
+            if isempty(settings.fig_specs.margin.figure)
+                if isempty(settings.fig_specs.title)
+                    settings.fig_specs.margin.figure = [15 15 5 5];
+                else
+                    settings.fig_specs.margin.figure = [15 15 5 20];
+                end
             end
         end
-        
+
         if isempty(settings.fig_specs.margin.panel)
             settings.fig_specs.margin.panel = [5 5 2 2];
         end
@@ -145,6 +169,11 @@ switch lower(todo)
         
         % settings.fig_specs.height
         % -----------------------------------------------------------------
+        if ~isempty(pf)
+            settings.fig_specs.height.map_panel = settings.fig_specs.height.figure - ...
+                                                  settings.fig_specs.margin.figure(2) - ...
+                                                  settings.fig_specs.margin.figure(4);
+        end
         
         if isempty(settings.fig_specs.height.colorbar)
             

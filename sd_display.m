@@ -1,4 +1,4 @@
-function [settings, p, h_figure] = sd_display(layers, settings)
+function [settings, p, h_figure, layers] = sd_display(layers, settings)
 % SD_DISPLAY Displays one or more layers of a series of NIfTI image slices
 % 
 % DESCRIPTION
@@ -25,6 +25,7 @@ function [settings, p, h_figure] = sd_display(layers, settings)
 %
 % ......................................................................... 
 % Bram Zandbelt (bramzandbelt@gmail.com), Radboud University
+% Modified by Pieter Vandemaele (pieter.vandemaele@gmail.com), Ghent University
 
 % Make sure required toolboxes are on path
 assert(~isempty(spm('Dir')),'<a href="http://www.fil.ion.ucl.ac.uk/spm/">SPM</a> cannot be found; make sure it is on MATLAB''s search path.')
@@ -55,28 +56,39 @@ nvox        = prod(vdims(1:2));
 
 % Display slices
 % -------------------------------------------------------------------------
+poff = 0;
 
-figure(h_figure);
-
-if ~isempty(settings.fig_specs.title)
-    title(settings.fig_specs.title);
+% if parent is a panel
+if settings.fig_specs.parent_type == 1 && ~isempty(settings.fig_specs.title)
+    poff = 1;
+    p(1).select();
+    ax = p(1).axis;
+    set(ax, 'XLim', [0, 1], 'YLim', [0, 1], 'Visible', 'off' )
+    FS = spm('FontSizes');
+    text(0.5,0.5, settings.fig_specs.title, 'FontSize',12,'FontWeight','bold','Interpreter','none','Parent',ax, 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'center');
     axis off
+elseif settings.fig_specs.parent_type ~= 1
+    figure(h_figure);
+    if ~isempty(settings.fig_specs.title)
+        title(settings.fig_specs.title);
+        axis off
+    end
 end
 
 for i_slice = 1:settings.fig_specs.n.slice
-    
+%     textwaitbar(i_slice, settings.fig_specs.n.slice, 'Processing slice');
     xyzmm = [x(:)';y(:)';ones(1,nvox)*zmm(i_slice);ones(1,nvox)];
     
     % Select axis/panel
-    p(1, i_slice).select();
+    p(1+poff, i_slice).select();
     
     axis image; axis off;
-    p(1, i_slice).hold('on')
-    
-    
+    p(1+poff, i_slice).hold('on');
     
     for i_layer = 1:numel(layers)
         
+        % disp(sprintf('==== Processing slice %d / layer %d', i_slice, i_layer));
+
         % Color-coding
         % =================================================================
         
@@ -86,18 +98,16 @@ for i_slice = 1:settings.fig_specs.n.slice
                            transform, ...
                            vdims, ...
                            layers(i_layer).color.hold);
-                       
+                        
         % Convert to RGB
         switch lower(layers(i_layer).type)
-            case {'truecolor', 'blob', 'dual', 'cluster'}
-                
+            case {'structural', 'truecolor', 'blob', 'dual', 'cluster'}
                 Y_rgb = sd_slice_to_rgb(Y_c,layers(i_layer),settings);
-                
         end
-        
+
         % Opacity settings
         switch lower(layers(i_layer).type)
-            case {'truecolor','blob','cluster'}
+            case {'structural' ,'truecolor','blob','cluster'}
                 Y_alpha = ones(size(Y_c)) .* layers(i_layer).color.opacity;
             case 'contour'
         end
@@ -138,14 +148,19 @@ for i_slice = 1:settings.fig_specs.n.slice
                     Y_m(Y_c == 0) = 0;
                 otherwise
                     Y_m = ones(size(Y_c));
+                    if i_layer > 1
+                    Y_m(Y_c < layers(i_layer).color.range(1)) = 0;
+                    end
+                    
             end
         end
+        
         
         % Display layer
         % =================================================================
         
         switch lower(layers(i_layer).type)
-            case {'truecolor', 'blob', 'dual','cluster'}
+            case {'structural', 'truecolor', 'blob', 'dual','cluster'}
                 h_image = image(Y_rgb);
                 set(h_image,'alphaData',Y_alpha .* Y_m);
             case 'contour'
@@ -226,7 +241,7 @@ for i_colorbar = 1:settings.fig_specs.n.colorbar
     [i_row,i_col] = ind2sub([settings.fig_specs.n.colorbar_row, ...
                              settings.fig_specs.n.colorbar_column], ...
                              i_colorbar);
-    p(2,i_row,i_col).select();
+    p(2+poff,i_row,i_col).select();
     
     switch lower(layers(i_layer).type)
         case {'blob','cluster'}

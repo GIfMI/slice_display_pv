@@ -15,6 +15,7 @@ function settings = sd_get_image_specs(layers, settings)
 %
 % ......................................................................... 
 % Bram Zandbelt (bramzandbelt@gmail.com), Radboud University
+% Modified by Pieter Vandemaele (pieter.vandemaele@gmail.com), Ghent University
 
 % Image orientation
 orientation_ix  = strcmpi(settings.slice.orientation, ...
@@ -69,6 +70,7 @@ dims            = slice_dims;
 xmm             = dims(X,1):dims(X,2):dims(X,3);
 ymm             = dims(Y,1):dims(Y,2):dims(Y,3);
 zmm             = slices(ismembertol(slices,settings.slice.disp_slices));
+% zmm = settings.slice.disp_slices;
 [y, x]          = meshgrid(ymm,xmm');
 
 % Voxel and panel dimensions
